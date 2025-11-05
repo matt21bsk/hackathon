@@ -1,0 +1,2 @@
+source .env
+airflow standalone

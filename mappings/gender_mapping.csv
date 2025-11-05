@@ -1,0 +1,3 @@
+source_concept,vocabulary_id,target_concept_id,target_vocabulary_id
+GENDER:M,LV_GENDER,8507,Gender
+GENDER:F,LV_GENDER,8532,Gender
