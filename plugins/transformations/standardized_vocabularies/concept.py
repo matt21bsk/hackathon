@@ -130,7 +130,7 @@ def __process_batch(
                 tmp.source_label AS concept_name,
                 '{concept_domain_id}' AS domain_id,
                 tmp.vocabulary_id AS vocabulary_id,
-                NULL AS concept_class_id,
+                'Gender' AS concept_class_id,
                 NULL AS standard_concept,
                 tmp.source_code AS concept_code,
                 DATE '2020-01-01' AS valid_start_date,

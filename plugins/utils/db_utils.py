@@ -52,8 +52,8 @@ def reactivate_triggers(pg_cur: PgCursor, pg_conn: PgConnection, table_name: str
 
 def truncate_table(pg_cur: PgCursor, pg_conn: PgConnection, table_name: str):
     """Truncate table cascade"""
-    logger.info(f"TRUNCATE table {table_name} CASCADE")
-    pg_cur.execute(f"TRUNCATE TABLE {table_name} CASCADE;")
+    logger.info(f"TRUNCATE table {table_name} RESTART IDENTITY CASCADE ")
+    pg_cur.execute(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE;")
     pg_conn.commit()
 
 

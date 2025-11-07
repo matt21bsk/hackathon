@@ -1,7 +1,10 @@
 import datetime
+from fastapi import params
 import pendulum
 from airflow.sdk import dag, Param, TaskGroup
 from airflow.sdk.bases.operator import chain
+from models.omop.standardized_clinical_data import visit_occurrence
+from operators.standardized_clinical_data.Visit_occurrence import VisitOccurrenceLoaderOperator
 from operators.standardized_clinical_data.person import PersonLoaderOperator
 from operators.standardized_vocabularies.vocabulary_operator import (
     VocabularyLoaderOperator,
@@ -66,10 +69,20 @@ def OmopEtlDag():
         source_conn_id="hackathon_source",
         target_conn_id="hackathon_target",
         truncate="{{ params.truncate }}",
-        batch_size="{{ params.batch_size }}",
+        batch_size="{{ params.batch_size }}"
     )
 
-    chain(gender_group, person_loader)
+   # Load Visit_occurrence
+    visit_occurrence_loader = VisitOccurrenceLoaderOperator(
+        task_id="load_visit_occurrence",
+        source_conn_id="hackathon_source",
+        target_conn_id="hackathon_target",
+        truncate="{{ params.truncate }}",
+        batch_size="{{ params.batch_size }}"
+    )
+
+
+    chain(gender_group, person_loader, visit_occurrence_loader)
 
 
 dag = OmopEtlDag()
