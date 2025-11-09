@@ -1,11 +1,11 @@
 from airflow.models import BaseOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from transformations.standardized_clinical_data.venue_to_visit_occurrence import (
-    load_visit_occurrence
+from transformations.standardized_clinical_data.diag_to_condition_occurrence import (
+    load_condition_occurrence
 )
 
 
-class VisitOccurrenceLoaderOperator(BaseOperator):
+class ConditionOccurrenceLoaderOperator(BaseOperator):
     template_fields = ("truncate", "batch_size")
 
     def __init__(
@@ -26,7 +26,7 @@ class VisitOccurrenceLoaderOperator(BaseOperator):
         source_hook = PostgresHook(postgres_conn_id=self.source_conn_id)
         target_hook = PostgresHook(postgres_conn_id=self.target_conn_id)
 
-        load_visit_occurrence(
+        load_condition_occurrence(
             source_hook,
             target_hook,
             truncate=str(self.truncate).lower() in ("true", "1"),

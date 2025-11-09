@@ -13,14 +13,14 @@ class VenueDTO(SQLObjectBaseModel):
         idpat: Optional[str],
         sej: str,
         date_debut_venue: Optional[datetime],
-        date_debut_fin: Optional[datetime],
+        date_fin_venue: Optional[datetime],
         um_entree : Optional[str],
         um_mode_hospitalisation: Optional[str]
     ):
         self.sej = sej
         self.idpat = idpat
         self.date_debut_venue= date_debut_venue
-        self.date_debut_fin= date_debut_fin
+        self.date_fin_venue= date_fin_venue
         self.um_entree = um_entree
         self.um_mode_hospitalisation = um_mode_hospitalisation
 
@@ -31,7 +31,7 @@ class VenueDTO(SQLObjectBaseModel):
             self.sej,
             self.idpat,
             self.date_debut_venue,
-            self.date_debut_fin,
+            self.date_fin_venue,
             self.um_entree,
             self.um_mode_hospitalisation
         ]
@@ -43,7 +43,7 @@ class VenueDTO(SQLObjectBaseModel):
             "sej",
             "idpat",
             "date_debut_venue",
-            "date_debut_fin",
+            "date_fin_venue",
             "um_entree",
             "um_mode_hospitalisation"
             ]

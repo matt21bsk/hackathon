@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 
 def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=20_000):
     """Orchestre le transfert de venues vers la table OMOP visit_occurrence."""
-    logger.info("Début du transfert patient → person")
+    logger.info("Début du transfert venue → visit_occurrence")
 
     source_conn: PgConnection
     source_cur: PgCursor
@@ -43,7 +43,7 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
         )
 
         # Création de la table temporaire tmp_person
-        logger.info("Création de la table temporaire tmp_visit_occurrence")
+        logger.info("Création de la table temporaire tmp_venue")
         target_cur.execute(
             """
             DROP TABLE IF EXISTS tmp_venue;
@@ -51,7 +51,7 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
                 sej TEXT PRIMARY KEY,
                 idpat TEXT,
                 date_debut_venue DATE,
-                date_debut_fin DATE,
+                date_fin_venue DATE,
                 um_entree TEXT,
                 um_mode_hospitalisation TEXT
             );
@@ -110,12 +110,12 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
             9201                            AS visit_concept_id,
             tmp.date_debut_venue            AS visit_start_date,
             NULL                            AS visit_start_datetime,
-            tmp.date_debut_fin              AS visit_end_date,
+            tmp.date_fin_venue              AS visit_end_date,
             NULL                            AS visit_end_datetime,
             32818                           AS visit_type_concept_id,
             NULL                            AS provider_id,
             NULL                            AS care_site_id,
-            NULL                            AS visit_source_value,
+            tmp.sej                         AS visit_source_value,
             NULL                            AS visit_source_concept_id,
             NULL                            AS admitted_from_concept_id,
             NULL                            AS admitted_from_source_value,
