@@ -130,7 +130,12 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
             tmp.date_debut_venue                         AS condition_start_date,
             tmp.date_fin_venue                           AS condition_end_date,
             32810                                        AS condition_type_concept_id,
-            NULL                                         AS condition_status_concept_id,
+            CASE tmp.rsstypediagnostic
+                WHEN 'DP' THEN 32902
+                WHEN 'DR' THEN 32902
+                WHEN 'DAS' THEN 32908
+                WHEN 'DAD' THEN 32908
+            END                                          AS condition_status_concept_id,
             NULL                                         AS provider_id,
             V.visit_occurrence_id                        AS visit_occurrence_id,
             NULL                                         AS visit_detail_id,

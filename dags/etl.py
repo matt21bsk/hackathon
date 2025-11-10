@@ -5,7 +5,7 @@ from airflow.sdk import dag, Param, TaskGroup
 from airflow.sdk.bases.operator import chain
 from operators.standardized_clinical_data.condition_occurrence import ConditionOccurrenceLoaderOperator
 from operators.standardized_clinical_data.person import PersonLoaderOperator
-from operators.standardized_clinical_data.visit_occurrence import VisitOccurrenceLoaderOperator
+from operators.standardized_clinical_data.Visit_occurrence import VisitOccurrenceLoaderOperator
 from operators.standardized_vocabularies.vocabulary_operator import (
     VocabularyLoaderOperator,
 )
