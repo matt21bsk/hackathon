@@ -1,11 +1,12 @@
 import datetime
 from fastapi import params
+from operators.standardized_clinical_data.measurement import MeasurementLoaderOperator
 import pendulum
 from airflow.sdk import dag, Param, TaskGroup
 from airflow.sdk.bases.operator import chain
 from operators.standardized_clinical_data.condition_occurrence import ConditionOccurrenceLoaderOperator
 from operators.standardized_clinical_data.person import PersonLoaderOperator
-from operators.standardized_clinical_data.Visit_occurrence import VisitOccurrenceLoaderOperator
+from operators.standardized_clinical_data.visit_occurrence import VisitOccurrenceLoaderOperator
 from operators.standardized_vocabularies.vocabulary_operator import (
     VocabularyLoaderOperator,
 )
@@ -63,6 +64,39 @@ def OmopEtlDag():
 
         chain(gender_vocabulary_loader, gender_concept_loader, gender_mapping_loader)
 
+    # Load measurement vocabulary, concept and mappings
+
+    with TaskGroup(
+        "measurement_loader", tooltip="Load measurement vocabulary, concepts, and mappings"
+    ) as measurement_group:
+        measurement_vocabulary_loader = VocabularyLoaderOperator(
+            task_id="load_measurement_vocabulary",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_MEASUREMENT",
+            vocabulary_sql_file_path="sql/standardized_vocabularies/measurement/measurement_vocabulary.sql",
+            batch_size="{{ params.batch_size }}",
+        )
+
+        measurement_concept_loader = ConceptLoaderOperator(
+            task_id="load_measurement_concept",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_MEASUREMENT",
+            concept_domain_id="Measurement",
+            concept_sql_file_path="sql/standardized_vocabularies/measurement/measurement_concept.sql",
+            batch_size="{{ params.batch_size }}",
+        )
+
+        measurement_mapping_loader = MappingLoaderOperator(
+            task_id="load_measurement_mapping",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_MEASUREMENT",
+            mapping_csv_path="mappings/measurement_mapping.csv",
+        )
+
+        chain(measurement_vocabulary_loader, measurement_concept_loader, measurement_mapping_loader)
+
     # Load person
     person_loader = PersonLoaderOperator(
         task_id="load_patients",
@@ -90,8 +124,20 @@ def OmopEtlDag():
         batch_size="{{ params.batch_size }}"
     )
 
+     #Load measurement
+    measurement_loader = MeasurementLoaderOperator(
+        task_id="load_measurement",
+        source_conn_id="hackathon_source",
+        target_conn_id="hackathon_target",
+        truncate="{{ params.truncate }}",
+        batch_size="{{ params.batch_size }}"
+    )
 
-    chain(gender_group, person_loader, visit_occurrence_loader, condition_occurrence_loader)
+    #parallel tasks
+    parallel_tasks=[condition_occurrence_loader,measurement_loader]
+
+
+    chain(gender_group, measurement_group, person_loader, parallel_tasks)
 
 
 dag = OmopEtlDag()
