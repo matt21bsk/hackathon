@@ -1,0 +1,5 @@
+source_concept,vocabulary_id,target_concept_id,target_vocabulary_id
+DP,LV_DIAGNOSTIC_TYPE,32902,Condition Status
+DR,LV_DIAGNOSTIC_TYPE,32902,Condition Status
+DAS,LV_DIAGNOSTIC_TYPE,32908,Condition Status
+DAD,LV_DIAGNOSTIC_TYPE,32908,Condition Status

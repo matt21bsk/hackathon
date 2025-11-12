@@ -123,6 +123,26 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
             WHERE c.vocabulary_id = 'CIM10'
                 AND cr.relationship_id = 'Maps to'
                 AND c.concept_code NOT LIKE 'Z%'
+        ),
+        condition_status_mapping as (
+            SELECT
+                src.concept_id AS source_concept_id,
+                src.concept_code AS source_concept_code,
+                tgt.concept_id AS target_concept_id,
+                tgt.concept_code AS target_concept_code,
+                tgt.domain_id AS target_domain_id,
+                tgt.standard_concept AS target_standard_concept
+            FROM
+                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                JOIN {Concept.schema}.{Concept.table_name} src
+                    ON rel.concept_id_1 = src.concept_id
+                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    ON rel.concept_id_2 = tgt.concept_id
+            WHERE
+                tgt.domain_id = 'Condition Status'
+                AND rel.relationship_id = 'Maps to'
+                AND tgt.standard_concept = 'S'
+                AND src.concept_id >= 2000000000
         )
         SELECT
             v.person_id                                  AS person_id,
@@ -130,12 +150,7 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
             tmp.date_debut_venue                         AS condition_start_date,
             tmp.date_fin_venue                           AS condition_end_date,
             32810                                        AS condition_type_concept_id,
-            CASE tmp.rsstypediagnostic
-                WHEN 'DP' THEN 32902
-                WHEN 'DR' THEN 32902
-                WHEN 'DAS' THEN 32908
-                WHEN 'DAD' THEN 32908
-            END                                          AS condition_status_concept_id,
+            csm.target_concept_id                        AS condition_status_concept_id,
             NULL                                         AS provider_id,
             V.visit_occurrence_id                        AS visit_occurrence_id,
             NULL                                         AS visit_detail_id,
@@ -148,6 +163,8 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
            ON  tmp.sej = v.visit_source_value
            LEFT JOIN cim10_mapping cim
            ON tmp.diag = cim.source_code
+           JOIN condition_status_mapping csm
+           ON tmp.rsstypediagnostic = csm.target_concept_id
         RETURNING  condition_occurrence_id
         """
 
