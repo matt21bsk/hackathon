@@ -100,6 +100,40 @@ def OmopEtlDag():
 
         chain(diagnostic_type_vocabulary_loader, diagnostic_type_concept_loader, diagnostic_type_mapping_loader)
 
+
+    # Load local cim 10 vocabulary and concept
+    with TaskGroup(
+        "local_cim_10_loader", tooltip="Load cim 10 vocabulary, concepts, and mappings"
+    ) as diagnostic_type_group:
+        diagnostic_type_vocabulary_loader = VocabularyLoaderOperator(
+            task_id="load_local_diagnostic_type_vocabulary",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_DIAGNOSTIC_TYPE",
+            vocabulary_sql_file_path="sql/standardized_vocabularies/condition_occurrence/diagnostic_type_vocabulary.sql",
+            batch_size="{{ params.batch_size }}",
+        )
+
+        diagnostic_type_concept_loader = ConceptLoaderOperator(
+            task_id="load_local_vocabulary_concept",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_DIAGNOSTIC_TYPE",
+            concept_domain_id="Diagnostic type",
+            concept_class_id="Diagnostic type",
+            concept_sql_file_path="sql/standardized_vocabularies/condition_occurrence/diagnostic_type_concept.sql",
+            batch_size="{{ params.batch_size }}",
+        )
+
+        diagnostic_type_mapping_loader = MappingLoaderOperator(
+            task_id="load_diagnostic_type_mapping",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_DIAGNOSTIC_TYPE",
+            mapping_csv_path="mappings/diagnostic_type_mapping.csv",
+        )
+
+        chain(diagnostic_type_vocabulary_loader, diagnostic_type_concept_loader, diagnostic_type_mapping_loader)
+
     # Load measurement vocabulary, concept and mappings
 
     with TaskGroup(
