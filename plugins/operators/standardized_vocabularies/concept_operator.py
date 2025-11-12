@@ -14,6 +14,7 @@ class ConceptLoaderOperator(BaseOperator):
         target_conn_id,
         vocabulary_name,
         concept_domain_id,
+        concept_class_id,
         concept_sql_file_path,
         batch_size: int | str = 20_000,
         **kwargs,
@@ -23,6 +24,7 @@ class ConceptLoaderOperator(BaseOperator):
         self.target_conn_id = target_conn_id
         self.vocabulary_name = vocabulary_name
         self.concept_domain_id = concept_domain_id
+        self.concept_class_id = concept_class_id
         self.concept_sql_file_path = concept_sql_file_path
         self.batch_size = batch_size
 
@@ -35,6 +37,7 @@ class ConceptLoaderOperator(BaseOperator):
             target_hook=target_hook,
             vocabulary_name=self.vocabulary_name,
             concept_domain_id=self.concept_domain_id,
+            concept_class_id=self.concept_class_id,
             sql_file_path=self.concept_sql_file_path,
             batch_size=int(self.batch_size),
         )

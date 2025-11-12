@@ -23,6 +23,7 @@ def load_concepts(
     vocabulary_name,
     sql_file_path,
     concept_domain_id,
+    concept_class_id,
     batch_size=20_000,
 ):
     logger.info(f"Chargement des concept locaux : {vocabulary_name}")
@@ -60,7 +61,7 @@ def load_concepts(
             batch_num += 1
 
             next_concept_id, row_count = __process_batch(
-                rows, target_cur, next_concept_id, concept_domain_id
+                rows, target_cur, next_concept_id, concept_domain_id,concept_class_id
             )
 
         for table in [Concept.table_name]:
@@ -90,7 +91,7 @@ def load_concepts(
 
 
 def __process_batch(
-    rows, target_cur, max_concept_id, concept_domain_id
+    rows, target_cur, max_concept_id, concept_domain_id,concept_class_id
 ) -> tuple[int, int]:
     if not rows:
         return max_concept_id, 0
@@ -130,7 +131,7 @@ def __process_batch(
                 tmp.source_label AS concept_name,
                 '{concept_domain_id}' AS domain_id,
                 tmp.vocabulary_id AS vocabulary_id,
-                'Gender' AS concept_class_id,
+                '{concept_class_id} ' AS concept_class_id,
                 NULL AS standard_concept,
                 tmp.source_code AS concept_code,
                 DATE '2020-01-01' AS valid_start_date,

@@ -37,6 +37,7 @@ def VocabularyDag():
         target_conn_id="hackathon_target",
         vocabulary_name="LV_GENDER",
         concept_domain_id="Gender",
+        concept_class_id="Gender",
         concept_sql_file_path="sql/standardized_vocabularies/person/gender_concept.sql",
         batch_size=50_000,
     )

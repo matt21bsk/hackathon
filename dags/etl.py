@@ -51,6 +51,7 @@ def OmopEtlDag():
             target_conn_id="hackathon_target",
             vocabulary_name="LV_GENDER",
             concept_domain_id="Gender",
+            concept_class_id="Gender",
             concept_sql_file_path="sql/standardized_vocabularies/person/gender_concept.sql",
             batch_size="{{ params.batch_size }}",
         )
@@ -84,6 +85,7 @@ def OmopEtlDag():
             target_conn_id="hackathon_target",
             vocabulary_name="LV_MEASUREMENT",
             concept_domain_id="Measurement",
+            concept_class_id="Lab Test",
             concept_sql_file_path="sql/standardized_vocabularies/measurement/measurement_concept.sql",
             batch_size="{{ params.batch_size }}",
         )
@@ -124,7 +126,7 @@ def OmopEtlDag():
         batch_size="{{ params.batch_size }}"
     )
 
-     #Load measurement
+    #Load measurement
     measurement_loader = MeasurementLoaderOperator(
         task_id="load_measurement",
         source_conn_id="hackathon_source",
