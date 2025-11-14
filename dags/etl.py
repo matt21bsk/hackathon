@@ -42,7 +42,7 @@ def OmopEtlDag():
             target_conn_id="hackathon_target",
             vocabulary_name="LV_GENDER",
             vocabulary_sql_file_path="sql/standardized_vocabularies/person/gender_vocabulary.sql",
-            batch_size="{{ params.batch_size }}",
+            batch_size="{{ params.batch_size }}"
         )
 
         gender_concept_loader = ConceptLoaderOperator(
@@ -53,14 +53,14 @@ def OmopEtlDag():
             concept_domain_id="Gender",
             concept_class_id="Gender",
             concept_sql_file_path="sql/standardized_vocabularies/person/gender_concept.sql",
-            batch_size="{{ params.batch_size }}",
+            batch_size="{{ params.batch_size }}"
         )
 
         gender_mapping_loader = MappingLoaderOperator(
             task_id="load_gender_mapping",
             target_conn_id="hackathon_target",
             vocabulary_name="LV_GENDER",
-            mapping_csv_path="mappings/gender_mapping.csv",
+            mapping_csv_path="mappings/gender_mapping.csv"
         )
 
         chain(gender_vocabulary_loader, gender_concept_loader, gender_mapping_loader)
@@ -77,7 +77,7 @@ def OmopEtlDag():
             target_conn_id="hackathon_target",
             vocabulary_name="LV_DIAGNOSTIC_TYPE",
             vocabulary_sql_file_path="sql/standardized_vocabularies/condition_occurrence/diagnostic_type_vocabulary.sql",
-            batch_size="{{ params.batch_size }}",
+            batch_size="{{ params.batch_size }}"
         )
 
         diagnostic_type_concept_loader = ConceptLoaderOperator(
@@ -88,51 +88,78 @@ def OmopEtlDag():
             concept_domain_id="Diagnostic type",
             concept_class_id="Diagnostic type",
             concept_sql_file_path="sql/standardized_vocabularies/condition_occurrence/diagnostic_type_concept.sql",
-            batch_size="{{ params.batch_size }}",
+            batch_size="{{ params.batch_size }}"
         )
 
         diagnostic_type_mapping_loader = MappingLoaderOperator(
             task_id="load_diagnostic_type_mapping",
             target_conn_id="hackathon_target",
             vocabulary_name="LV_DIAGNOSTIC_TYPE",
-            mapping_csv_path="mappings/diagnostic_type_mapping.csv",
+            mapping_csv_path="mappings/diagnostic_type_mapping.csv"
         )
 
         chain(diagnostic_type_vocabulary_loader, diagnostic_type_concept_loader, diagnostic_type_mapping_loader)
 
 
-    # Load local cim 10 vocabulary and concept
+    # Load local cim10 vocabulary and concept
     with TaskGroup(
-        "local_cim_10_loader", tooltip="Load cim 10 vocabulary, concepts, and mappings"
-    ) as diagnostic_type_group:
-        diagnostic_type_vocabulary_loader = VocabularyLoaderOperator(
-            task_id="load_local_diagnostic_type_vocabulary",
+        "local_cim10_loader", tooltip="Load cim10 vocabulary, concepts"
+    ) as local_cim10_group:
+        local_cim10_vocabulary_loader = VocabularyLoaderOperator(
+            task_id="load_local_cim10_vocabulary",
             source_conn_id="hackathon_source",
             target_conn_id="hackathon_target",
-            vocabulary_name="LV_DIAGNOSTIC_TYPE",
-            vocabulary_sql_file_path="sql/standardized_vocabularies/condition_occurrence/diagnostic_type_vocabulary.sql",
-            batch_size="{{ params.batch_size }}",
+            vocabulary_name="LV_CIM10",
+            vocabulary_sql_file_path="sql/standardized_vocabularies/condition_occurrence/local_cim10_vocabulary.sql",
+            batch_size="{{ params.batch_size }}"
         )
 
-        diagnostic_type_concept_loader = ConceptLoaderOperator(
-            task_id="load_local_vocabulary_concept",
+        local_cim10_concept_loader = ConceptLoaderOperator(
+            task_id="load_local_cim10_concept",
             source_conn_id="hackathon_source",
             target_conn_id="hackathon_target",
-            vocabulary_name="LV_DIAGNOSTIC_TYPE",
-            concept_domain_id="Diagnostic type",
-            concept_class_id="Diagnostic type",
-            concept_sql_file_path="sql/standardized_vocabularies/condition_occurrence/diagnostic_type_concept.sql",
-            batch_size="{{ params.batch_size }}",
+            vocabulary_name="LV_CIM10",
+            concept_domain_id="Condition",
+            concept_class_id="CIM 10 code",
+            concept_sql_file_path="sql/standardized_vocabularies/condition_occurrence/local_cim10_concept.sql",
+            batch_size="{{ params.batch_size }}"
         )
 
-        diagnostic_type_mapping_loader = MappingLoaderOperator(
-            task_id="load_diagnostic_type_mapping",
+        chain(local_cim10_vocabulary_loader, local_cim10_concept_loader)
+
+    # Load local unit vocabulary and concept
+    with TaskGroup(
+        "local_unit_loader", tooltip="Load unit vocabulary, concepts"
+    ) as local_unit_group:
+        local_unit_vocabulary_loader = VocabularyLoaderOperator(
+            task_id="load_local_unit_vocabulary",
+            source_conn_id="hackathon_source",
             target_conn_id="hackathon_target",
-            vocabulary_name="LV_DIAGNOSTIC_TYPE",
-            mapping_csv_path="mappings/diagnostic_type_mapping.csv",
+            vocabulary_name="LV_UNIT",
+            vocabulary_sql_file_path="sql/standardized_vocabularies/measurement/unit_vocabulary.sql",
+            batch_size="{{ params.batch_size }}"
         )
 
-        chain(diagnostic_type_vocabulary_loader, diagnostic_type_concept_loader, diagnostic_type_mapping_loader)
+        local_unit_concept_loader = ConceptLoaderOperator(
+            task_id="load_local_unit_concept",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_UNIT",
+            concept_domain_id="Unit",
+            concept_class_id="Unit",
+            concept_sql_file_path="sql/standardized_vocabularies/measurement/unit_concept.sql",
+            batch_size="{{ params.batch_size }}"
+        )
+
+        unit_mapping_loader = MappingLoaderOperator(
+            task_id="load_unit_mapping",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_UNITS",
+            mapping_csv_path="mappings/mapping_unit.csv",
+        )
+
+
+        chain(local_unit_vocabulary_loader, local_unit_concept_loader, unit_mapping_loader)
 
     # Load measurement vocabulary, concept and mappings
 
@@ -203,12 +230,13 @@ def OmopEtlDag():
         truncate="{{ params.truncate }}",
         batch_size="{{ params.batch_size }}"
     )
+   #
 
     #parallel tasks
     parallel_tasks=[condition_occurrence_loader,measurement_loader]
 
 
-    chain(gender_group, diagnostic_type_group, measurement_group, person_loader, parallel_tasks)
+    chain(gender_group, diagnostic_type_group, local_cim10_group, measurement_group, local_unit_group, person_loader, visit_occurrence_loader, parallel_tasks)
 
 
 dag = OmopEtlDag()

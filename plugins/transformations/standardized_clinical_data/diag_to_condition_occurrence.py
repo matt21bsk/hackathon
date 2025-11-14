@@ -105,24 +105,25 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
 
         logger.info("Insertion des venues dans la table OMOP condition_occurrence")
         insert_sql = f"""
-        INSERT INTO {ConditionOccurrence.schema}.{ConditionOccurrence.table_name}
-        ({', '.join(ConditionOccurrence._columns())})
-        WITH cim10_mapping as (
+         WITH cim10_mapping as (
             SELECT
-                REPLACE(c.concept_code, '.', '')            AS source_code,
-                c.concept_id                                AS source_concept_id,
-                c2.concept_code                             AS target_concept_code,
-                CASE c2.domain_id
-                    WHEN 'Condition'
-                    THEN c2.concept_id
-                    ELSE 0
-                END                                         AS target_concept_id
-            FROM omop.concept c
-                JOIN omop.concept_relationship cr ON c.concept_id = cr.concept_id_1
-                JOIN omop.concept c2 ON cr.concept_id_2 = c2.concept_id
-            WHERE c.vocabulary_id = 'CIM10'
-                AND cr.relationship_id = 'Maps to'
-                AND c.concept_code NOT LIKE 'Z%'
+                src.concept_id AS source_concept_id,
+                REPLACE(src.concept_code, '.', '') AS source_concept_code,
+                tgt.concept_id AS target_concept_id,
+                tgt.concept_code AS target_concept_code,
+                tgt.domain_id AS target_domain_id,
+                tgt.standard_concept AS target_standard_concept
+            FROM
+                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                JOIN {Concept.schema}.{Concept.table_name} src
+                    ON rel.concept_id_1 = src.concept_id
+                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    ON rel.concept_id_2 = tgt.concept_id
+            WHERE
+                tgt.domain_id = 'Condition'
+                AND rel.relationship_id = 'Maps to'
+                AND tgt.standard_concept = 'S'
+                AND src.vocabulary_id = 'CIM10'
         ),
         condition_status_mapping as (
             SELECT
@@ -144,6 +145,8 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
                 AND tgt.standard_concept = 'S'
                 AND src.concept_id >= 2000000000
         )
+        INSERT INTO {ConditionOccurrence.schema}.{ConditionOccurrence.table_name}
+        ({', '.join(ConditionOccurrence._columns())})
         SELECT
             v.person_id                                  AS person_id,
             COALESCE(cim.target_concept_id, 0)           AS condition_concept_id,
@@ -154,7 +157,7 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
             NULL                                         AS provider_id,
             V.visit_occurrence_id                        AS visit_occurrence_id,
             NULL                                         AS visit_detail_id,
-            cim.source_code                              AS condition_source_value,
+            cim.source_concept_code                      AS condition_source_value,
             cim.source_concept_id                        AS condition_source_concept_id,
             tmp.rsstypediagnostic                        AS condition_status_source_value
         FROM
@@ -162,9 +165,9 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
            LEFT JOIN {VisitOccurrence.schema}.{VisitOccurrence.table_name} v
            ON  tmp.sej = v.visit_source_value
            LEFT JOIN cim10_mapping cim
-           ON tmp.diag = cim.source_code
-           JOIN condition_status_mapping csm
-           ON tmp.rsstypediagnostic = csm.target_concept_id
+           ON tmp.diag = cim.source_concept_code
+           LEFT JOIN condition_status_mapping csm
+           ON tmp.rsstypediagnostic = csm.source_concept_code
         RETURNING  condition_occurrence_id
         """
 

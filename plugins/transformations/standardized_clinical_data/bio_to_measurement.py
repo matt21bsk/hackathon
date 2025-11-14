@@ -108,57 +108,71 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
 
         logger.info("Insertion des venues dans la table OMOP measurement")
         insert_sql = f"""
-        INSERT INTO {Measurement.schema}.{Measurement.table_name}
-        ({', '.join(Measurement._columns())})
         WITH loinc_mapping as (
             SELECT
-                c.concept_id as source_concept_id,
-                c.concept_name as source_concept_name,
-                c2.concept_id as target_concept_id,
-                c2.concept_code as target_concept_code
+                src.concept_id AS source_concept_id,
+                src.concept_code AS source_concept_code,
+                tgt.concept_id AS target_concept_id,
+                tgt.concept_code AS target_concept_code,
+                tgt.domain_id AS target_domain_id,
+                tgt.standard_concept AS target_standard_concept
             FROM
-                omop.concept c
-                LEFT JOIN omop.concept_relationship cr
-                ON c.concept_id = cr.concept_id_1
-                LEFT JOIN omop.concept c2
-                ON cr.concept_id_2 =c2.concept_id
+                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                JOIN {Concept.schema}.{Concept.table_name} src
+                    ON rel.concept_id_1 = src.concept_id
+                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    ON rel.concept_id_2 = tgt.concept_id
             WHERE
-                c.vocabulary_id = 'LV_MEASUREMENT'
+                tgt.domain_id = 'Measurement'
+                AND rel.relationship_id = 'Maps to'
+                AND tgt.standard_concept = 'S'
+                AND src.concept_id >= 2000000000
         ),
         unit as (
             SELECT
-                c.concept_id as unit_concept_id,
-                c.concept_code as unit_concept_code,
-                c.concept_name as unit_concept_name
+                src.concept_id AS source_concept_id,
+                src.concept_code AS source_concept_code,
+                tgt.concept_id AS target_concept_id,
+                tgt.concept_code AS target_concept_code,
+                tgt.domain_id AS target_domain_id,
+                tgt.standard_concept AS target_standard_concept
             FROM
-                omop.concept c
+                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                JOIN {Concept.schema}.{Concept.table_name} src
+                    ON rel.concept_id_1 = src.concept_id
+                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    ON rel.concept_id_2 = tgt.concept_id
             WHERE
-                c.domain_id = 'Unit'
-                and c.standard_concept = 'S'
+                tgt.domain_id = 'Unit'
+                AND rel.relationship_id = 'Maps to'
+                AND tgt.standard_concept = 'S'
+                AND src.concept_id >= 2000000000
         )
+        INSERT INTO {Measurement.schema}.{Measurement.table_name}
+        ({', '.join(Measurement._columns())})
         SELECT
             v.person_id                                  AS person_id,
             COALESCE(map.target_concept_id, 0)           AS measurement_concept_id,
             tmp.date_result                              AS measurement_date,
             32810                                        AS measurement_type_concept_id,
             tmp.value                                    AS value_as_number,
-            u.unit_concept_id                            AS unit_concept_id,
+            COALESCE(u.target_concept_id,0)              AS unit_concept_id,
             tmp.norm_lower                               AS range_low,
             tmp.norm_upper                               AS range_high,
             v.visit_occurrence_id                        AS visit_occurrence_id,
             tmp.source_concept_name                      AS measurement_source_value,
             map.source_concept_id                        AS measurement_source_concept_id,
             tmp.unit_name                                AS unit_source_value,
-            u.unit_concept_id                            AS unit_source_concept_id,
+            u.source_concept_id                          AS unit_source_concept_id,
             tmp.verbatim                                 AS value_source_value
         FROM
            tmp_bio tmp
            LEFT JOIN {VisitOccurrence.schema}.{VisitOccurrence.table_name} v
            ON  tmp.sej = v.visit_source_value
            LEFT JOIN loinc_mapping map
-           ON tmp.unit_name = map.source_concept_name
+           ON tmp.unit_name = map.source_concept_code
            LEFT JOIN unit u
-           ON tmp.unit_name = u.unit_concept_code
+           ON tmp.unit_name = u.source_concept_code
         RETURNING  measurement_id
         """
 
