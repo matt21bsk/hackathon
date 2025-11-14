@@ -115,9 +115,9 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
                 tgt.standard_concept AS target_standard_concept
             FROM
                 {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+                RIGHT JOIN {Concept.schema}.{Concept.table_name} src
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                RIGHT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
             WHERE
                 tgt.domain_id = 'Condition'
@@ -135,9 +135,9 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
                 tgt.standard_concept AS target_standard_concept
             FROM
                 {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+                RIGHT JOIN {Concept.schema}.{Concept.table_name} src
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                RIGHT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
             WHERE
                 tgt.domain_id = 'Condition Status'

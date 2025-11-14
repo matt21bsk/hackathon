@@ -58,7 +58,8 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 norm_lower FLOAT,
                 norm_upper FLOAT,
                 source_concept_name TEXT,
-                verbatim TEXT
+                verbatim TEXT,
+                source_concept_code TEXT
             );
         """
         )
@@ -118,9 +119,9 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 tgt.standard_concept AS target_standard_concept
             FROM
                 {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+               RIGHT JOIN {Concept.schema}.{Concept.table_name} src
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+               RIGHT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
             WHERE
                 tgt.domain_id = 'Measurement'
@@ -138,9 +139,9 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 tgt.standard_concept AS target_standard_concept
             FROM
                 {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+               RIGHT JOIN {Concept.schema}.{Concept.table_name} src
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+               RIGHT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
             WHERE
                 tgt.domain_id = 'Unit'
@@ -170,7 +171,7 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
            LEFT JOIN {VisitOccurrence.schema}.{VisitOccurrence.table_name} v
            ON  tmp.sej = v.visit_source_value
            LEFT JOIN loinc_mapping map
-           ON tmp.unit_name = map.source_concept_code
+           ON tmp.source_concept_code = map.source_concept_code
            LEFT JOIN unit u
            ON tmp.unit_name = u.source_concept_code
         RETURNING  measurement_id

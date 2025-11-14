@@ -17,8 +17,10 @@ class BiologieDTO(SQLObjectBaseModel):
         unit_name : Optional[str],
         norm_lower: Optional[float],
         norm_upper: Optional[float],
-        source_concept: Optional[str],
-        verbatim: Optional[str]
+        source_concept_name: Optional[str],
+        verbatim: Optional[str],
+        source_concept_code:Optional[str]
+
     ):
         self.idpat= idpat
         self.sej=sej
@@ -27,8 +29,9 @@ class BiologieDTO(SQLObjectBaseModel):
         self.unit_name=unit_name
         self.norm_lower=norm_lower
         self.norm_upper=norm_upper
-        self.source_concept=source_concept
+        self.source_concept_name=source_concept_name
         self.verbatim=verbatim
+        self.source_concept_code=source_concept_code
 
     @property
     def _values(self) -> List:
@@ -41,8 +44,9 @@ class BiologieDTO(SQLObjectBaseModel):
         self.unit_name,
         self.norm_lower,
         self.norm_upper,
-        self.source_concept,
-        self.verbatim
+        self.source_concept_name,
+        self.verbatim,
+        self.source_concept_code
         ]
 
     @classmethod
@@ -57,5 +61,6 @@ class BiologieDTO(SQLObjectBaseModel):
         "norm_lower",
         "norm_upper",
         "source_concept_name",
-        "verbatim"
+        "verbatim",
+        "source_concept_code"
         ]
