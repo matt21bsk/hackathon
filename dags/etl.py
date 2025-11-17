@@ -6,6 +6,7 @@ from airflow.sdk import dag, Param, TaskGroup
 from airflow.sdk.bases.operator import chain
 from operators.standardized_clinical_data.condition_occurrence import ConditionOccurrenceLoaderOperator
 from operators.standardized_clinical_data.person import PersonLoaderOperator
+from operators.standardized_clinical_data.procedure_occurrence import ProcedureOccurrenceLoaderOperator
 from operators.standardized_clinical_data.visit_occurrence import VisitOccurrenceLoaderOperator
 from operators.standardized_vocabularies.vocabulary_operator import (
     VocabularyLoaderOperator,
@@ -222,6 +223,15 @@ def OmopEtlDag():
         batch_size="{{ params.batch_size }}"
     )
 
+   #Load procedure_occurrence
+    procedure_occurrence_loader = ProcedureOccurrenceLoaderOperator(
+       task_id = "load_procedure_occurrence",
+       source_conn_id="hackathon_source",
+       target_conn_id="hackathon_target",
+       truncate= "{{params.truncate}}",
+       batch_size ="{{params.batch_size}}"
+   )
+
     #Load measurement
     measurement_loader = MeasurementLoaderOperator(
         task_id="load_measurement",
@@ -233,7 +243,7 @@ def OmopEtlDag():
    #
 
     #parallel tasks
-    parallel_tasks=[condition_occurrence_loader,measurement_loader]
+    parallel_tasks=[condition_occurrence_loader, procedure_occurrence_loader, measurement_loader]
 
 
     chain(gender_group, diagnostic_type_group, local_cim10_group, measurement_group, local_unit_group, person_loader, visit_occurrence_loader, parallel_tasks)
