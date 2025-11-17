@@ -67,6 +67,44 @@ def OmopEtlDag():
         chain(gender_vocabulary_loader, gender_concept_loader, gender_mapping_loader)
 
 
+    # Load local visit vocabulary and concept
+    with TaskGroup(
+        "local_visit_loader", tooltip="Load local visit vocabulary, concepts"
+    ) as local_visit_group:
+        local_visit_vocabulary_loader = VocabularyLoaderOperator(
+            task_id="load_local_visit_vocabulary",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_VISIT",
+            vocabulary_sql_file_path="sql/standardized_vocabularies/visit_occurrence/visit_vocabulary.sql",
+            batch_size="{{ params.batch_size }}"
+        )
+
+        local_visit_concept_from_loader = ConceptLoaderOperator(
+            task_id="load_local_visit_from_concept",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_VISIT",
+            concept_domain_id="Visit",
+            concept_class_id="Visit",
+            concept_sql_file_path="sql/standardized_vocabularies/visit_occurrence/visit_from_concept.sql",
+            batch_size="{{ params.batch_size }}"
+        )
+
+        local_visit_concept_to_loader = ConceptLoaderOperator(
+            task_id="load_local_visit_to_concept",
+            source_conn_id="hackathon_source",
+            target_conn_id="hackathon_target",
+            vocabulary_name="LV_VISIT",
+            concept_domain_id="Visit",
+            concept_class_id="Visit",
+            concept_sql_file_path="sql/standardized_vocabularies/visit_occurrence/visit_to_concept.sql",
+            batch_size="{{ params.batch_size }}"
+        )
+
+
+        chain(local_visit_vocabulary_loader, local_visit_concept_from_loader, local_visit_concept_to_loader)
+
 
     # Load diagnostic type vocabulary, concept and mappings
     with TaskGroup(
@@ -246,7 +284,7 @@ def OmopEtlDag():
     parallel_tasks=[condition_occurrence_loader, procedure_occurrence_loader, measurement_loader]
 
 
-    chain(gender_group, diagnostic_type_group, local_cim10_group, measurement_group, local_unit_group, person_loader, visit_occurrence_loader, parallel_tasks)
+    chain(gender_group, local_visit_group, diagnostic_type_group, local_cim10_group, measurement_group, local_unit_group, person_loader, visit_occurrence_loader, parallel_tasks)
 
 
 dag = OmopEtlDag()
