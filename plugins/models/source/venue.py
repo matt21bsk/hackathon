@@ -15,6 +15,8 @@ class VenueDTO(SQLObjectBaseModel):
         date_debut_venue: Optional[datetime],
         date_fin_venue: Optional[datetime],
         um_entree : Optional[str],
+        mode_entree : Optional[str],
+        mode_sortie : Optional[str],
         um_mode_hospitalisation: Optional[str]
     ):
         self.sej = sej
@@ -22,6 +24,8 @@ class VenueDTO(SQLObjectBaseModel):
         self.date_debut_venue= date_debut_venue
         self.date_fin_venue= date_fin_venue
         self.um_entree = um_entree
+        self.mode_entree = mode_entree
+        self.mode_sortie = mode_sortie
         self.um_mode_hospitalisation = um_mode_hospitalisation
 
     @property
@@ -33,6 +37,8 @@ class VenueDTO(SQLObjectBaseModel):
             self.date_debut_venue,
             self.date_fin_venue,
             self.um_entree,
+            self.mode_entree,
+            self.mode_sortie,
             self.um_mode_hospitalisation
         ]
 
@@ -45,5 +51,7 @@ class VenueDTO(SQLObjectBaseModel):
             "date_debut_venue",
             "date_fin_venue",
             "um_entree",
+            "mode_entree",
+            "mode_sortie",
             "um_mode_hospitalisation"
             ]

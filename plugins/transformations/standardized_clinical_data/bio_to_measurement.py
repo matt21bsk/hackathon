@@ -119,9 +119,9 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 tgt.standard_concept AS target_standard_concept
             FROM
                 {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-               RIGHT JOIN {Concept.schema}.{Concept.table_name} src
+                JOIN {Concept.schema}.{Concept.table_name} src
                     ON rel.concept_id_1 = src.concept_id
-               RIGHT JOIN {Concept.schema}.{Concept.table_name} tgt
+                JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
             WHERE
                 tgt.domain_id = 'Measurement'
@@ -139,9 +139,9 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 tgt.standard_concept AS target_standard_concept
             FROM
                 {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-               RIGHT JOIN {Concept.schema}.{Concept.table_name} src
+                JOIN {Concept.schema}.{Concept.table_name} src
                     ON rel.concept_id_1 = src.concept_id
-               RIGHT JOIN {Concept.schema}.{Concept.table_name} tgt
+                JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
             WHERE
                 tgt.domain_id = 'Unit'

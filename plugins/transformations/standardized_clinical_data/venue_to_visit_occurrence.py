@@ -34,7 +34,7 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
         source_conn, source_cur = get_cursor_by_sql_file(
             pg_hook=source_hook,
             batch_size=batch_size,
-            sql_file_path="sql/standardized_clinical_data/visit_occurrence/get_rss.sql",
+            sql_file_path="sql/standardized_clinical_data/visit_occurrence/get_rss.sql"
         )
 
         # Get target cursor (open cursor, no query)
@@ -53,6 +53,8 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
                 date_debut_venue DATE,
                 date_fin_venue DATE,
                 um_entree TEXT,
+                mode_entree TEXT,
+                mode_sortie TEXT,
                 um_mode_hospitalisation TEXT
             );
         """
@@ -103,28 +105,73 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
 
         logger.info("Insertion des venues dans la table OMOP visit_occurrence")
         insert_sql = f"""
+        WITH visit_from_mapping as (
+            SELECT
+                src.concept_id AS source_concept_id,
+                REPLACE(src.concept_code, '.', '') AS source_concept_code,
+                tgt.concept_id AS target_concept_id,
+                tgt.concept_code AS target_concept_code,
+                tgt.domain_id AS target_domain_id,
+                tgt.standard_concept AS target_standard_concept
+            FROM
+                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                JOIN {Concept.schema}.{Concept.table_name} src
+                    ON rel.concept_id_1 = src.concept_id
+                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    ON rel.concept_id_2 = tgt.concept_id
+            WHERE
+                tgt.domain_id = 'Visit'
+                AND rel.relationship_id = 'Maps to'
+                AND tgt.standard_concept = 'S'
+                AND src.vocabulary_id = 'LV_VISIT_FROM'
+        ),
+        visit_to_mapping as (
+            SELECT
+                src.concept_id AS source_concept_id,
+                REPLACE(src.concept_code, '.', '') AS source_concept_code,
+                tgt.concept_id AS target_concept_id,
+                tgt.concept_code AS target_concept_code,
+                tgt.domain_id AS target_domain_id,
+                tgt.standard_concept AS target_standard_concept
+            FROM
+                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                 JOIN {Concept.schema}.{Concept.table_name} src
+                    ON rel.concept_id_1 = src.concept_id
+                 JOIN {Concept.schema}.{Concept.table_name} tgt
+                    ON rel.concept_id_2 = tgt.concept_id
+            WHERE
+                tgt.domain_id = 'Visit'
+                AND rel.relationship_id = 'Maps to'
+                AND tgt.standard_concept = 'S'
+                AND src.vocabulary_id = 'LV_VISIT_TO'
+        )
         INSERT INTO {VisitOccurrence.schema}.{VisitOccurrence.table_name}
         ({', '.join(VisitOccurrence._columns())})
         SELECT
-            p.person_id                     AS person_id,
-            9201                            AS visit_concept_id,
-            tmp.date_debut_venue            AS visit_start_date,
-            NULL                            AS visit_start_datetime,
-            tmp.date_fin_venue              AS visit_end_date,
-            NULL                            AS visit_end_datetime,
-            32818                           AS visit_type_concept_id,
-            NULL                            AS provider_id,
-            NULL                            AS care_site_id,
-            tmp.sej                         AS visit_source_value,
-            NULL                            AS visit_source_concept_id,
-            NULL                            AS admitted_from_concept_id,
-            NULL                            AS admitted_from_source_value,
-            NULL                            AS discharged_to_concept_id,
-            NULL                            AS discharged_to_source_value,
-            NULL                            AS preceding_visit_occurrence_id
+            p.person_id                                 AS person_id,
+            9201                                        AS visit_concept_id,
+            tmp.date_debut_venue                        AS visit_start_date,
+            NULL                                        AS visit_start_datetime,
+            tmp.date_fin_venue                          AS visit_end_date,
+            NULL                                        AS visit_end_datetime,
+            32818                                       AS visit_type_concept_id,
+            NULL                                        AS provider_id,
+            NULL                                        AS care_site_id,
+            tmp.sej                                     AS visit_source_value,
+            NULL                                        AS visit_source_concept_id,
+            COALESCE(vf.target_concept_id,0)            AS admitted_from_concept_id,
+            tmp.mode_entree                             AS admitted_from_source_value,
+            COALESCE(vt.target_concept_id,0)            AS discharged_to_concept_id,
+            tmp.mode_sortie                             AS discharged_to_source_value,
+            NULL                                        AS preceding_visit_occurrence_id
         FROM
-           tmp_venue tmp LEFT JOIN {Person.schema}.{Person.table_name} p
+           tmp_venue tmp
+           LEFT JOIN {Person.schema}.{Person.table_name} p
            ON  tmp.idpat = p.person_source_value
+           LEFT JOIN visit_from_mapping vf
+           ON tmp.mode_entree = vf.source_concept_code
+           LEFT JOIN visit_to_mapping vt
+           ON tmp.mode_sortie = vt.source_concept_code
         RETURNING  visit_occurrence_id
         """
 
