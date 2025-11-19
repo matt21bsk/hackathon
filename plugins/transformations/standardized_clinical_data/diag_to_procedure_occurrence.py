@@ -107,34 +107,37 @@ def load_procedure_occurrence_from_diag(source_hook, target_hook, truncate=False
         insert_sql = f"""
          WITH cim10_mapping as (
             SELECT
-                src.concept_id AS source_concept_id,
-                REPLACE(src.concept_code, '.', '') AS source_concept_code,
-                tgt.concept_id AS target_concept_id,
-                tgt.concept_code AS target_concept_code,
-                tgt.domain_id AS target_domain_id,
-                tgt.standard_concept AS target_standard_concept
-            FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
-                    ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                src_local.concept_id        AS source_concept_id,
+                src_local.concept_code      AS source_concept_code,
+                src_omop.concept_id         AS source_omop_concept_id,
+                src_omop.concept_code       AS source_omop_concept_code,
+                tgt.concept_id              AS target_concept_id,
+                tgt.concept_code            AS target_concept_code,
+                tgt.domain_id               AS target_domain_id,
+                tgt.standard_concept        AS target_standard_concept
+            FROM {Concept.schema}.{Concept.table_name} src_local
+                LEFT JOIN {Concept.schema}.{Concept.table_name} src_omop
+                    ON src_local.concept_code = replace(src_omop.concept_code,'.','')
+                    AND src_omop.vocabulary_id = 'CIM10'
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                    ON src_omop.concept_id = rel.concept_id_1
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN concept tgt
                     ON rel.concept_id_2 = tgt.concept_id
-            WHERE
-                tgt.domain_id = 'Procedure'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
-                AND src.vocabulary_id = 'CIM10'
+                    AND tgt.standard_concept = 'S'
+            WHERE src_local.vocabulary_id = 'LV_CIM10'
+                AND tgt.domain_id = 'Procedure'
         )
         INSERT INTO {ProcedureOccurrence.schema}.{ProcedureOccurrence.table_name}
         ({', '.join(ProcedureOccurrence._columns())})
         SELECT
             v.person_id                                  AS person_id,
-            COALESCE(cim.target_concept_id, 0)           AS preocedure_concept_id,
+            cim.target_concept_id                        AS preocedure_concept_id,
             tmp.date_acte                                AS procedure_date,
             32810                                        AS procedure_type_concept_id,
             V.visit_occurrence_id                        AS visit_occurrence_id,
             NULL                                         AS visit_detail_id,
-            cim.source_concept_code                      AS procedure_source_value,
+            tmp.diag                                     AS procedure_source_value,
             cim.source_concept_id                        AS condition_source_concept_id
         FROM
            tmp_diag tmp

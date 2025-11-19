@@ -110,7 +110,7 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
         logger.info("Insertion des venues dans la table OMOP measurement")
         insert_sql = f"""
         WITH loinc_mapping as (
-            SELECT
+             SELECT
                 src.concept_id AS source_concept_id,
                 src.concept_code AS source_concept_code,
                 tgt.concept_id AS target_concept_id,
@@ -118,15 +118,16 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 tgt.domain_id AS target_domain_id,
                 tgt.standard_concept AS target_standard_concept
             FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+                {Concept.schema}.{Concept.table_name} src
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
+                    AND tgt.domain_id = 'Measurement'
+                    AND tgt.standard_concept = 'S'
             WHERE
-                tgt.domain_id = 'Measurement'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
+                src.domain_id = 'Measurement'
                 AND src.concept_id >= 2000000000
         ),
         unit as (
@@ -138,15 +139,16 @@ def load_measurement(source_hook, target_hook, truncate=False, batch_size=20_000
                 tgt.domain_id AS target_domain_id,
                 tgt.standard_concept AS target_standard_concept
             FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+                {Concept.schema}.{Concept.table_name} src
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
+                    AND tgt.domain_id = 'Unit'
+                    AND tgt.standard_concept = 'S'
             WHERE
-                tgt.domain_id = 'Unit'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
+                src.domain_id = 'Unit'
                 AND src.concept_id >= 2000000000
         )
         INSERT INTO {Measurement.schema}.{Measurement.table_name}

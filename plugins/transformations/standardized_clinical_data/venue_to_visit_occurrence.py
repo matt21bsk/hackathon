@@ -108,42 +108,44 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
         WITH visit_from_mapping as (
             SELECT
                 src.concept_id AS source_concept_id,
-                REPLACE(src.concept_code, '.', '') AS source_concept_code,
+                src.concept_code AS source_concept_code,
                 tgt.concept_id AS target_concept_id,
                 tgt.concept_code AS target_concept_code,
                 tgt.domain_id AS target_domain_id,
                 tgt.standard_concept AS target_standard_concept
             FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+                {Concept.schema}.{Concept.table_name} src
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
+                    AND tgt.domain_id = 'Visit'
+                    AND tgt.standard_concept = 'S'
             WHERE
-                tgt.domain_id = 'Visit'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
-                AND src.vocabulary_id = 'LV_VISIT_FROM'
+                src.domain_id = 'Visit from'
+                AND src.concept_id >= 2000000000
         ),
         visit_to_mapping as (
             SELECT
                 src.concept_id AS source_concept_id,
-                REPLACE(src.concept_code, '.', '') AS source_concept_code,
+                src.concept_code AS source_concept_code,
                 tgt.concept_id AS target_concept_id,
                 tgt.concept_code AS target_concept_code,
                 tgt.domain_id AS target_domain_id,
                 tgt.standard_concept AS target_standard_concept
             FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                 JOIN {Concept.schema}.{Concept.table_name} src
+                {Concept.schema}.{Concept.table_name} src
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
                     ON rel.concept_id_1 = src.concept_id
-                 JOIN {Concept.schema}.{Concept.table_name} tgt
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
+                    AND tgt.domain_id = 'Visit'
+                    AND tgt.standard_concept = 'S'
             WHERE
-                tgt.domain_id = 'Visit'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
-                AND src.vocabulary_id = 'LV_VISIT_TO'
+                src.domain_id = 'Visit to'
+                AND src.concept_id >= 2000000000
         )
         INSERT INTO {VisitOccurrence.schema}.{VisitOccurrence.table_name}
         ({', '.join(VisitOccurrence._columns())})
@@ -159,9 +161,9 @@ def load_visit_occurrence(source_hook, target_hook, truncate=False, batch_size=2
             NULL                                        AS care_site_id,
             tmp.sej                                     AS visit_source_value,
             NULL                                        AS visit_source_concept_id,
-            COALESCE(vf.target_concept_id,0)            AS admitted_from_concept_id,
+            NULL                                        AS admitted_from_concept_id,
             tmp.mode_entree                             AS admitted_from_source_value,
-            COALESCE(vt.target_concept_id,0)            AS discharged_to_concept_id,
+            NULL                                        AS discharged_to_concept_id,
             tmp.mode_sortie                             AS discharged_to_source_value,
             NULL                                        AS preceding_visit_occurrence_id
         FROM

@@ -105,44 +105,48 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
 
         logger.info("Insertion des venues dans la table OMOP condition_occurrence")
         insert_sql = f"""
-         WITH cim10_mapping as (
+        WITH cim10_mapping as (
             SELECT
-                src.concept_id AS source_concept_id,
-                REPLACE(src.concept_code, '.', '') AS source_concept_code,
-                tgt.concept_id AS target_concept_id,
-                tgt.concept_code AS target_concept_code,
-                tgt.domain_id AS target_domain_id,
-                tgt.standard_concept AS target_standard_concept
-            FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
-                    ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                src_local.concept_id        AS source_concept_id,
+                src_local.concept_code      AS source_concept_code,
+                src_omop.concept_id         AS source_omop_concept_id,
+                src_omop.concept_code       AS source_omop_concept_code,
+                tgt.concept_id              AS target_concept_id,
+                tgt.concept_code            AS target_concept_code,
+                tgt.domain_id               AS target_domain_id,
+                tgt.standard_concept        AS target_standard_concept
+            FROM {Concept.schema}.{Concept.table_name} src_local
+                LEFT JOIN {Concept.schema}.{Concept.table_name} src_omop
+                    ON src_local.concept_code = replace(src_omop.concept_code,'.','')
+                    AND src_omop.vocabulary_id = 'CIM10'
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
+                    ON src_omop.concept_id = rel.concept_id_1
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN concept tgt
                     ON rel.concept_id_2 = tgt.concept_id
-            WHERE
-                tgt.domain_id = 'Condition'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
-                AND src.vocabulary_id = 'CIM10'
+                    AND tgt.standard_concept = 'S'
+            WHERE  src_local.vocabulary_id = 'LV_CIM10'
+                   AND (tgt.concept_id is null OR tgt.domain_id = 'Condition')
         ),
         condition_status_mapping as (
             SELECT
-                src.concept_id AS source_concept_id,
-                src.concept_code AS source_concept_code,
-                tgt.concept_id AS target_concept_id,
-                tgt.concept_code AS target_concept_code,
-                tgt.domain_id AS target_domain_id,
-                tgt.standard_concept AS target_standard_concept
+                src.concept_id                        AS source_concept_id,
+                src.concept_code                      AS source_concept_code,
+                tgt.concept_id                        AS target_concept_id,
+                tgt.concept_code                      AS target_concept_code,
+                tgt.domain_id                         AS target_domain_id,
+                tgt.standard_concept                  AS target_standard_concept
             FROM
-                {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
-                JOIN {Concept.schema}.{Concept.table_name} src
+                {Concept.schema}.{Concept.table_name} src
+                LEFT JOIN {ConceptRelationship.schema}.{ConceptRelationship.table_name} rel
                     ON rel.concept_id_1 = src.concept_id
-                JOIN {Concept.schema}.{Concept.table_name} tgt
+                    AND rel.relationship_id = 'Maps to'
+                LEFT JOIN {Concept.schema}.{Concept.table_name} tgt
                     ON rel.concept_id_2 = tgt.concept_id
+                    AND tgt.domain_id = 'Condition Status'
+                    AND tgt.standard_concept = 'S'
             WHERE
-                tgt.domain_id = 'Condition Status'
-                AND rel.relationship_id = 'Maps to'
-                AND tgt.standard_concept = 'S'
+                src.domain_id = 'Diagnostic type'
                 AND src.concept_id >= 2000000000
         )
         INSERT INTO {ConditionOccurrence.schema}.{ConditionOccurrence.table_name}
@@ -157,16 +161,16 @@ def load_condition_occurrence(source_hook, target_hook, truncate=False, batch_si
             NULL                                         AS provider_id,
             V.visit_occurrence_id                        AS visit_occurrence_id,
             NULL                                         AS visit_detail_id,
-            cim.source_concept_code                      AS condition_source_value,
+            tmp.diag                                     AS condition_source_value,
             cim.source_concept_id                        AS condition_source_concept_id,
             tmp.rsstypediagnostic                        AS condition_status_source_value
         FROM
            tmp_diag tmp
-           LEFT JOIN {VisitOccurrence.schema}.{VisitOccurrence.table_name} v
+           JOIN {VisitOccurrence.schema}.{VisitOccurrence.table_name} v
            ON  tmp.sej = v.visit_source_value
-           LEFT JOIN cim10_mapping cim
+           JOIN cim10_mapping cim
            ON tmp.diag = cim.source_concept_code
-           LEFT JOIN condition_status_mapping csm
+           JOIN condition_status_mapping csm
            ON tmp.rsstypediagnostic = csm.source_concept_code
         RETURNING  condition_occurrence_id
         """
